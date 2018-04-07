@@ -4,6 +4,7 @@ var Client = require('utorrent-api');
 const http = require('http');
 const express = require('express');
 const MessagingResponse = require('twilio').twiml.MessagingResponse;
+const PORT = process.env.PORT || 3000
 
 const app = express();
 const bodyParser = require('body-parser');
@@ -22,9 +23,10 @@ app.post('/sms', (req, res) => {
   })
 });
 
-http.createServer(app).listen(3000, () => {
-  console.log('Express server listening on port 3000');
-});
+app.listen(PORT, () => console.log(`Listening on ${ PORT }`))
+// http.createServer(app).listen(3000, () => {
+//   console.log('Express server listening on port 3000');
+// });
 
 //ANSWER TEXT MESSAGE /////////////////////////////////////////////////////////////////////////////////
 function textMessageAnswer(textMessage, cookies, cb){
