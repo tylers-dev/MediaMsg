@@ -15,7 +15,7 @@ app.use(cookieParser());
 app.post('/sms', (req, res) => {
   const twiml = new MessagingResponse();
   textMessageAnswer(req.body.Body, req.cookies, function(answer, cookie){
-    res.cookie('mediaName', cookie);
+    res.cookie('mediaResult', cookie);
     twiml.message(answer);
     res.writeHead(200, {'Content-Type': 'text/xml'});
     res.end(twiml.toString());
@@ -29,21 +29,32 @@ http.createServer(app).listen(3000, () => {
 //ANSWER TEXT MESSAGE /////////////////////////////////////////////////////////////////////////////////
 function textMessageAnswer(textMessage, cookies, cb){
   var cookie_mediaResult = cookies.mediaResult;
-  console.log("first")
   if(textMessage[0].match(/[1-9]/) != null){
     //Selection response - text message is responding with a selection number
-    if(!cookie_mediaName) return false;
-    textMessage = textMessage.trim();
-
+    if(!cookie_mediaResult) return false;
+    var mediaResult = JSON.parse(cookie_mediaResult);
+    var selections = textMessage.split(/[ ,]+/).join('').split('').map(n=>{
+      return mediaResult[parseInt(n-1)] || null;
+    }).filter(n => n);
+    selections.forEach(movie=>{
+      downloadMedia(movie.url)
+    })
+    var downloadingMessage = "Downloading...\n" + selections.map(x=>{return (x.title)}).join(" and ") + "\nPlease allow 10-15mins for download to complete.";
+    cb(downloadingMessage, "");
   }
   else{
     //The text message is a word or non-numeric character
     findMedia(textMessage, function(media){
-      if(!media) cb("Sorry no movie was found for:", textMessage);
+      //Movie not found on YTS
+      if(!media) {
+        cb("Sorry no movie was found for: "+textMessage);
+        return false;
+      }
+      media = media.slice(0,9);
       media = media.map(m=>{
         return {
           "title":m.title_long,
-          "torrentUrl":(function(){
+          "url":(function(){
             var highestQualityTorrent;
             //1080p
             highestQualityTorrent = m.torrents.filter(t=>{return t.quality==="1080p"});
@@ -60,7 +71,6 @@ function textMessageAnswer(textMessage, cookies, cb){
       for(var i=0; i<media.length; i++){
         message += "["+(i+1)+"] "+media[i].title+"\n";
       }
-      console.log(message)
       cb(message, JSON.stringify(media))
     });
   }
@@ -71,10 +81,7 @@ function findMedia(title, cb){
     url: "https://yts.am/api/v2/list_movies.json?"+"query_term="+title,
     json: true
   }, function(error, response, body) {
-    cb(body.data.movies);
-    // var movieUrl = movies[0].torrents[0].url;
-    // console.log("Downloading Movie:",movies[0].title_long)
-    // downloadMedia(movieUrl);
+    cb(body.data.movies || undefined);
   });
 }
 
@@ -90,3 +97,10 @@ function downloadMedia(url){
       });
   });
 }
+// utorrent.call('list', function(err, torrents_list) {
+//     if(err) { console.log(err); return; }
+//     var torrents = torrents_list.torrents;
+//     torrents.forEach(torrent=>{
+//       console.log("Remaining bytes", torrent[18]);
+//     })
+// });
