@@ -23,10 +23,10 @@ app.post('/sms', (req, res) => {
   })
 });
 
-app.listen(PORT, () => console.log(`Listening on ${ PORT }`))
-// http.createServer(app).listen(3000, () => {
-//   console.log('Express server listening on port 3000');
-// });
+//app.listen(PORT, () => console.log(`Listening on ${ PORT }`))
+http.createServer(app).listen(3000, () => {
+  console.log('Express server listening on port 3000');
+});
 
 //ANSWER TEXT MESSAGE /////////////////////////////////////////////////////////////////////////////////
 function textMessageAnswer(textMessage, cookies, cb){
@@ -39,70 +39,101 @@ function textMessageAnswer(textMessage, cookies, cb){
       return mediaResult[parseInt(n-1)] || null;
     }).filter(n => n);
     selections.forEach(movie=>{
-      downloadMedia(movie.url)
+      downloadMedia(movie.url, function(success){
+        if(success){
+          var downloadingMessage = "Downloading...\n" + selections.map(x=>{return (x.title)}).join(" and ") + "\nPlease allow 10-15mins for download to complete.";
+          cb(downloadingMessage, "");
+        }else{
+          cb("Oops system isn't ready to download. Please try again later.", "");
+        }
+      })
     })
-    var downloadingMessage = "Downloading...\n" + selections.map(x=>{return (x.title)}).join(" and ") + "\nPlease allow 10-15mins for download to complete.";
-    cb(downloadingMessage, "");
   }
   else{
     //The text message is a word or non-numeric character
     findMedia(textMessage, function(media){
       //Movie not found on YTS
-      if(!media) {
-        cb("Sorry no movie was found for: "+textMessage);
-        return false;
-      }
+      if(!media) return failMsg();
+      var qualityPriority = ["1080p", "720p"];
       media = media.slice(0,9);
-      media = media.map(m=>{
-        return {
-          "title":m.title_long,
-          "url":(function(){
-            var highestQualityTorrent;
-            //1080p
-            highestQualityTorrent = m.torrents.filter(t=>{return t.quality==="1080p"});
-            if(highestQualityTorrent.length>0) return highestQualityTorrent[0].url;
-            //720p
-            highestQualityTorrent = m.torrents.filter(t=>{return t.quality==="720p"});
-            if(highestQualityTorrent.length>0) return highestQualityTorrent[0].url;
-            //Other
-            return m.torrents.url;
-          })()
+      media = media.reduce((result, movie)=>{
+        if(movie.title_long && movie.torrents){
+          var newMovieObj = {
+            "title":movie.title_long,
+            "url": movie.torrents.sort(function(a,b){
+                      //Find the highest quality torrent
+                    	if(qualityPriority.indexOf(a.quality) === -1) return 1;
+                    	return qualityPriority.indexOf(a.quality) > qualityPriority.indexOf(b.quality);
+                    })[0].url
+          };
+          if(newMovieObj.title && newMovieObj.url){
+            result.push(newMovieObj)
+            return result;
+          }
         }
-      })
+      }, [])
+      if(!media) return failMsg();
       var message = "\nPlease respond with a number from the list below:\n";
       for(var i=0; i<media.length; i++){
         message += "["+(i+1)+"] "+media[i].title+"\n";
       }
       cb(message, JSON.stringify(media))
+      function failMsg(){
+        cb("Sorry no movie was found for: "+textMessage);
+        return false;
+      }
     });
   }
 }
+
 //YTS API - FINDS MEDIA//////////////////////////////////////////////////////////////////////////////////
 function findMedia(title, cb){
   request({
     url: "https://yts.am/api/v2/list_movies.json?"+"query_term="+title,
     json: true
   }, function(error, response, body) {
-    cb(body.data.movies || undefined);
+    var movies = body.data || undefined;
+    movies = body.data.movies || undefined;
+    cb(movies);
   });
 }
 
-//UTORRENT CLIENT - DOWNLOADS MEDIA//////////////////////////////////////////////////////////////////////////////////
-var utorrent = new Client('localhost', '22222');
-utorrent.setCredentials('admin', '971ef964-471f-4ea8-b868-0a5163d222a1');
-function downloadMedia(url){
-  request({'uri' : url, 'encoding': null}, function (error, response, torrentFileBuffer) {
-      utorrent.call('add-file', {'torrent_file': torrentFileBuffer}, function(err, data) {
-          if(err) { console.log('error : '); console.log(err); return; }
-          console.log('Successfully added torrent file !');
-          console.log(data);
-      });
-  });
-}
-// utorrent.call('list', function(err, torrents_list) {
-//     if(err) { console.log(err); return; }
-//     var torrents = torrents_list.torrents;
-//     torrents.forEach(torrent=>{
-//       console.log("Remaining bytes", torrent[18]);
-//     })
-// });
+//QBITTORRENT CLIENT - DOWNLOADS MEDIA//////////////////////////////////////////////////////////////////////////////////
+
+var qBittorrent  = require('qbittorrent-client').API3
+
+var client = new qBittorrent({
+  username: 'admin',
+  password: 'a88d0778-198b-4cfd-a305-03ecd45b1457',
+  host: '136.63.71.226',
+  port: 8085
+})
+
+
+client.addTorrentFromURL({urls:"https://yts.am/torrent/download/90194CDADF77F6A0E1141670F61BAADA17EA8B37"}, function(err, body){
+  console.log(body)
+})
+
+// var torrentClient = require("qbittorrent-api");
+// function downloadMedia(url, cb){
+//   var qbt = torrentClient.connect("http://136.63.71.226:8085", "admin", "a88d0778-198b-4cfd-a305-03ecd45b1457");
+//   qbt.setCookie("yts.am", "");
+//   qbt.add(url, "", "", function(error){
+//     cb(error);
+//   });
+// }
+//
+// downloadMedia("https://yts.am/torrent/download/90194CDADF77F6A0E1141670F61BAADA17EA8B37", function(error){
+//   console.log("dgsdgsdg", error)
+// })
+
+//SEARCH OMDB FOR MOVIE INFORMATION//////////////////////////////////////////////////////////////////////////////////
+// const OmdbApi = require('omdb-api-pt')
+//
+// // Create a new instance of the module.
+// const omdb = new OmdbApi({apiKey:"cc9ab314"});
+// omdb.bySearch({
+//   search: 'saw',
+//   type: 'movie'
+// }).then(res => console.log(res))
+//   .catch(err => console.error(err))
