@@ -99,29 +99,18 @@ function findMedia(title, cb){
 }
 
 //QBITTORRENT CLIENT - DOWNLOADS MEDIA//////////////////////////////////////////////////////////////////////////////////
-
 var qBittorrent  = require('qbittorrent-client').API3
-
 var client = new qBittorrent({
   username: 'admin',
   password: 'a88d0778-198b-4cfd-a305-03ecd45b1457',
   host: '136.63.71.226',
   port: 8085
 })
-
-
-client.addTorrentFromURL({urls:"https://yts.am/torrent/download/90194CDADF77F6A0E1141670F61BAADA17EA8B37"}, function(err, body){
-  console.log(body)
-})
-
-// var torrentClient = require("qbittorrent-api");
-// function downloadMedia(url, cb){
-//   var qbt = torrentClient.connect("http://136.63.71.226:8085", "admin", "a88d0778-198b-4cfd-a305-03ecd45b1457");
-//   qbt.setCookie("yts.am", "");
-//   qbt.add(url, "", "", function(error){
-//     cb(error);
-//   });
-// }
+function downloadMedia(url, cb){
+  client.addTorrentFromURL({urls:url}, function(err, body){
+    cb(true);
+  })
+}
 //
 // downloadMedia("https://yts.am/torrent/download/90194CDADF77F6A0E1141670F61BAADA17EA8B37", function(error){
 //   console.log("dgsdgsdg", error)
