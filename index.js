@@ -92,7 +92,7 @@ function findMedia(title, cb){
     json: true
   }, function(error, response, body) {
     var movies = body.data || undefined;
-    movies = body.data.movies || undefined;
+    if(movies) movies = body.data.movies || undefined;
     cb(movies);
   });
 }
