@@ -13,10 +13,8 @@
     "body-parser": "^1.18.2",
     "cookie-parser": "^1.4.3",
     "express": "^4.16.3",
-    "omdb-api-pt": "^2.0.1",
-    "qbittorrent-api": "^1.0.0",
+    "qbittorrent-client": "^1.1.0",
     "request": "^2.85.0",
-    "twilio": "^3.14.0",
-    "utorrent-api": "^0.1.5"
+    "twilio": "^3.14.0"
   }
 }
