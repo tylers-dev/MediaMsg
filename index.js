@@ -1,10 +1,9 @@
 var request = require('request');
-var Client = require('utorrent-api');
 
 const http = require('http');
 const express = require('express');
 const MessagingResponse = require('twilio').twiml.MessagingResponse;
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3000;
 
 const app = express();
 const bodyParser = require('body-parser');
