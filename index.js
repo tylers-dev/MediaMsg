@@ -30,6 +30,7 @@ app.listen(PORT, () => console.log(`Listening on ${ PORT }`))
 //ANSWER TEXT MESSAGE /////////////////////////////////////////////////////////////////////////////////
 function textMessageAnswer(textMessage, cookies, cb){
   var cookie_mediaResult = cookies.mediaResult;
+  console.log("cookie_mediaResult", cookie_mediaResult)
   if(textMessage[0].match(/[1-9]/) != null){
     //Selection response - text message is responding with a selection number
     if(!cookie_mediaResult) return false;
